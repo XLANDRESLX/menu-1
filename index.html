@@ -181,6 +181,7 @@
   .cart-item{background:var(--card);border-radius:14px;padding:12px;display:flex;align-items:flex-start;gap:10px;}
   .ci-info{flex:1;}
   .ci-name{font-weight:800;font-size:.95rem;text-transform:capitalize;}
+  .ci-cat{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;display:block;}
   .ci-controls{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;}
   .qty-btn{
     background:#333;border:none;color:var(--text);
@@ -423,10 +424,16 @@ function buildMenu(filas) {
   const meta = filas.find(r => norm(r.empresa) === norm(nombreEmpresa) && (r.lugar || r.telefono)) || filas[0];
   empresa = { nombre: nombreEmpresa, lugar: meta.lugar, telefono: meta.telefono };
 
-  // Filtrar filas de esta empresa y sin estado Desactivado
+  // Filtrar filas de esta empresa y sin estado Desactivado/Inactivo
   menuData = {};
+  const estadosInactivos = ['desactivado', 'inactivo', 'off', '0', 'nulo', 'null'];
   filas
-    .filter(r => norm(r.empresa) === norm(nombreEmpresa) && r.estado !== 'desactivado')
+    .filter(r => {
+      const mismaEmpresa = norm(r.empresa) === norm(nombreEmpresa);
+      const estadoNormalizado = norm(r.estado || '');
+      const estaActivo = !estadosInactivos.includes(estadoNormalizado);
+      return mismaEmpresa && estaActivo;
+    })
     .forEach(r => {
       if (!menuData[r.categoria]) menuData[r.categoria] = [];
       menuData[r.categoria].push(r);
@@ -498,7 +505,7 @@ function productCard(p, cat) {
       '<div class="product-footer">' +
         '<span class="product-price">$' + p.precio.toLocaleString('es-CO') + '</span>' +
         '<button class="add-btn" onclick=\'addToCart(' +
-          JSON.stringify({nombre:p.nombre, precio:p.precio}) +
+          JSON.stringify({nombre:p.nombre, precio:p.precio, categoria:cat}) +
         ')\'>+ Agregar</button>' +
       '</div>' +
     '</div>' +
@@ -574,7 +581,7 @@ function clearStorage() {
 //  CARRITO
 // ─────────────────────────────────────────────
 function addToCart(product) {
-  const item = cart.find(i => i.nombre === product.nombre);
+  const item = cart.find(i => i.nombre === product.nombre && i.categoria === product.categoria);
   if (item) item.qty++;
   else cart.push({...product, qty:1, nota:''});
   saveCart();
@@ -636,9 +643,11 @@ function renderCart() {
 }
 
 function cartItemHTML(item, idx) {
+  const categoria = item.categoria ? '<span class="ci-cat">' + cap(item.categoria) + '</span>' : '';
   return '<div class="cart-item">' +
     '<div class="ci-info">' +
       '<div class="ci-name">' + cap(item.nombre) + '</div>' +
+      categoria +
       '<div class="ci-controls">' +
         '<button class="qty-btn" onclick="changeQty('+idx+',-1)">−</button>' +
         '<span class="qty-val">' + item.qty + '</span>' +
@@ -672,7 +681,8 @@ function sendOrder() {
   msg += '👤 *Cliente:* ' + nombre + '\n';
   msg += '💳 *Pago:* ' + pago + '\n\n📋 *Productos:*\n';
   cart.forEach(item => {
-    msg += '• ' + item.qty + 'x ' + cap(item.nombre) + ' — $' + (item.precio*item.qty).toLocaleString('es-CO');
+    const cat = item.categoria ? '[' + cap(item.categoria) + '] ' : '';
+    msg += '• ' + item.qty + 'x ' + cat + cap(item.nombre) + ' — $' + (item.precio*item.qty).toLocaleString('es-CO');
     if (item.nota) msg += '\n  📝 _' + item.nota + '_';
     msg += '\n';
   });

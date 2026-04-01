@@ -217,6 +217,7 @@
   }
   .total-label{font-weight:700;color:var(--muted);}
   .total-val{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;color:var(--accent);}
+  .pago-alert{background:#f5a62322;border:1px solid var(--accent);border-radius:10px;padding:12px;font-size:.85rem;color:var(--accent);margin-top:8px;}
   .send-btn{
     width:100%;padding:16px;background:#25D366;
     border:none;border-radius:50px;color:#fff;
@@ -550,6 +551,7 @@ function setupObserver() {
 // ─────────────────────────────────────────────
 const LS_CART   = 'carta_cart';
 const LS_NOMBRE = 'carta_nombre';
+const LS_DIRECCION = 'carta_direccion';
 const LS_PAGO   = 'carta_pago';
 
 function saveCart() {
@@ -564,8 +566,10 @@ function loadCart() {
 function saveForm() {
   try {
     const n = document.getElementById('f-nombre')?.value || '';
+    const d = document.getElementById('f-direccion')?.value || '';
     const p = document.getElementById('f-pago')?.value   || '';
     if (n) localStorage.setItem(LS_NOMBRE, n);
+    if (d) localStorage.setItem(LS_DIRECCION, d);
     if (p) localStorage.setItem(LS_PAGO,   p);
   } catch(e) {}
 }
@@ -573,6 +577,7 @@ function clearStorage() {
   try {
     localStorage.removeItem(LS_CART);
     localStorage.removeItem(LS_NOMBRE);
+    localStorage.removeItem(LS_DIRECCION);
     localStorage.removeItem(LS_PAGO);
   } catch(e) {}
 }
@@ -607,6 +612,7 @@ document.getElementById('cart-overlay').addEventListener('click', e => {
 function renderCart() {
   const cont       = document.getElementById('cart-content');
   const nombrePrev = localStorage.getItem(LS_NOMBRE) || '';
+  const direccionPrev = localStorage.getItem(LS_DIRECCION) || '';
   const pagoPrev   = localStorage.getItem(LS_PAGO)   || '';
 
   if (!cart.length) {
@@ -620,13 +626,17 @@ function renderCart() {
       '<div><label class="form-label">👤 Nombre del cliente</label>' +
       '<input class="form-input" id="f-nombre" placeholder="Tu nombre completo" autocomplete="name"' +
         ' value="' + esc(nombrePrev) + '" oninput="saveForm()"/></div>' +
+      '<div><label class="form-label">📍 Dirección de entrega</label>' +
+      '<input class="form-input" id="f-direccion" placeholder="Calle, barrio, referencia..." autocomplete="address"' +
+        ' value="' + esc(direccionPrev) + '" oninput="saveForm()"/></div>' +
       '<div><label class="form-label">💳 Método de pago</label>' +
-      '<select class="form-select" id="f-pago" onchange="saveForm()">' +
+      '<select class="form-select" id="f-pago" onchange="saveForm(); updatePagoAlert()">' +
         '<option value="">Selecciona…</option>' +
         ['Efectivo','Transferencia','Nequi','Daviplata','Tarjeta débito/crédito'].map(op =>
           '<option' + (pagoPrev === op ? ' selected' : '') + '>' + op + '</option>'
         ).join('') +
       '</select></div>' +
+      '<div id="pago-alert" class="pago-alert" style="display:none">📱 Por favor envíe el comprobante de pago al número del local una vez realizado el pedido</div>' +
     '</div>' +
     '<div class="cart-total">' +
       '<span class="total-label">Total</span>' +
@@ -640,6 +650,7 @@ function renderCart() {
     const el = document.getElementById('nota-'+idx);
     if (el) el.value = item.nota || '';
   });
+  updatePagoAlert();
 }
 
 function cartItemHTML(item, idx) {
@@ -671,14 +682,17 @@ function removeItem(idx) { cart.splice(idx,1); saveCart(); updateBadge(); render
 
 function sendOrder() {
   const nombre = (document.getElementById('f-nombre')?.value||'').trim();
+  const direccion = (document.getElementById('f-direccion')?.value||'').trim();
   const pago   =  document.getElementById('f-pago')?.value||'';
   if (!nombre) { showToast('⚠️ Escribe tu nombre'); return; }
+  if (!direccion) { showToast('⚠️ Escribe la dirección de entrega'); return; }
   if (!pago)   { showToast('⚠️ Elige método de pago'); return; }
   if (!cart.length) { showToast('⚠️ El carrito está vacío'); return; }
 
   const total = cart.reduce((s,i) => s+i.precio*i.qty, 0);
   let msg = '🍽️ *PEDIDO - ' + empresa.nombre + '*\n';
   msg += '👤 *Cliente:* ' + nombre + '\n';
+  msg += '📍 *Dirección:* ' + direccion + '\n';
   msg += '💳 *Pago:* ' + pago + '\n\n📋 *Productos:*\n';
   cart.forEach(item => {
     const cat = item.categoria ? '[' + cap(item.categoria) + '] ' : '';
@@ -692,9 +706,9 @@ function sendOrder() {
   const wa  = num.startsWith('57') ? num : '57'+num;
   window.open('https://wa.me/'+wa+'?text='+encodeURIComponent(msg), '_blank');
 
-  // Limpiar carrito al enviar (nombre y pago se conservan para el próximo pedido)
+  // Limpiar solo los productos, mantener nombre, dirección y pago para próximo pedido
   cart = [];
-  clearStorage();
+  try { localStorage.setItem(LS_CART, JSON.stringify(cart)); } catch(e) {}
   updateBadge();
   closeCart();
   showToast('✅ Pedido enviado');
@@ -719,6 +733,13 @@ function showToast(msg) {
   t.textContent = msg; t.classList.add('show');
   clearTimeout(t._tid);
   t._tid = setTimeout(()=>t.classList.remove('show'), 2300);
+}
+function updatePagoAlert() {
+  const pago = document.getElementById('f-pago')?.value || '';
+  const alert = document.getElementById('pago-alert');
+  if (alert) {
+    alert.style.display = ['Transferencia','Nequi','Daviplata'].includes(pago) ? 'block' : 'none';
+  }
 }
 
 // ─────────────────────────────────────────────

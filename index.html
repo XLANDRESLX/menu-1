@@ -4,6 +4,13 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Carta Digital</title>
+<meta name="theme-color" content="#f5a623">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Carta Digital">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23f5a623'/%3E%3Ctext x='50' y='68' font-family='Arial Black' font-size='40' fill='%230f0f0f' text-anchor='middle'%3ECD%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23f5a623'/%3E%3Ctext x='50' y='68' font-family='Arial Black' font-size='40' fill='%230f0f0f' text-anchor='middle'%3ECD%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 <style>
   :root {
@@ -246,6 +253,14 @@
     .product-img{height:120px;}
   }
   @media(max-width:340px){.products-grid{grid-template-columns:1fr;}}
+  @media (display-mode: standalone) {
+    body{padding-bottom:30px;}
+    .cover-scroll{display:none;}
+  }
+  @media (display-mode: fullscreen) {
+    body{padding-bottom:30px;}
+    .cover-scroll{display:none;}
+  }
 </style>
 </head>
 <body>
@@ -745,6 +760,45 @@ function updatePagoAlert() {
 // ─────────────────────────────────────────────
 loadCart();  // restaurar carrito guardado antes de arrancar
 init();
+
+// ─────────────────────────────────────────────
+// PWA - Generar manifest.json dinámicamente
+// ─────────────────────────────────────────────
+(function() {
+  const iconSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%23f5a623'/%3E%3Ctext x='256' y='340' font-family='Arial Black' font-size='200' fill='%230f0f0f' text-anchor='middle'%3ECD%3C/text%3E%3C/svg%3E";
+  
+  const manifest = {
+    "name": "Carta Digital",
+    "short_name": "Carta",
+    "description": "Carta digital del restaurante",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#0f0f0f",
+    "theme_color": "#f5a623",
+    "orientation": "portrait",
+    "icons": [
+      {
+        "src": iconSvg,
+        "sizes": "512x512",
+        "type": "image/svg+xml",
+        "purpose": "any maskable"
+      },
+      {
+        "src": iconSvg,
+        "sizes": "192x192",
+        "type": "image/svg+xml",
+        "purpose": "any maskable"
+      }
+    ]
+  };
+
+  const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = url;
+  document.head.appendChild(link);
+})();
 </script>
 </body>
 </html>

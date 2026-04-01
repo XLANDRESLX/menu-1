@@ -94,6 +94,17 @@
   /* ── ERROR ── */
   #error-msg{display:none;padding:40px 20px;text-align:center;color:#e8441a;font-size:1rem;line-height:1.8;}
 
+  /* ── BUSCADOR ── */
+  #buscador-container{padding:16px 16px 0;max-width:940px;margin:0 auto;display:none;}
+  .buscador-input{
+    width:100%;padding:14px 18px;
+    background:var(--card);border:1px solid #333;border-radius:50px;
+    color:var(--text);font-family:'Nunito',sans-serif;font-size:1rem;
+    outline:none;transition:border .2s;
+  }
+  .buscador-input:focus{border-color:var(--accent);}
+  .buscador-input::placeholder{color:#555;}
+
   /* ── MENÚ ── */
   #menu{padding:32px 16px 20px;max-width:940px;margin:0 auto;display:none;}
   .section-title{
@@ -297,6 +308,11 @@
 <!-- ERROR -->
 <div id="error-msg"></div>
 
+<!-- BUSCADOR -->
+<div id="buscador-container">
+  <input type="text" id="buscador" class="buscador-input" placeholder="🔍 Buscar productos..." oninput="filtrarProductos(this.value)">
+</div>
+
 <!-- MENÚ -->
 <div id="menu"></div>
 
@@ -467,8 +483,9 @@ function buildMenu(filas) {
   hideLoading();
   document.getElementById('menu').style.display = 'block';
   document.getElementById('navbar').style.display = 'flex';
+  document.getElementById('buscador-container').style.display = 'block';
   setupObserver();
-  updateBadge(); // mostrar badge si había carrito guardado
+  updateBadge();
 }
 
 // ─────────────────────────────────────────────
@@ -553,12 +570,42 @@ function setupObserver() {
     entries.forEach(e => {
       if (e.isIntersecting) {
         const id = e.target.id.replace('cat-','');
-        document.querySelectorAll('.nav-item').forEach(b =>
-          b.classList.toggle('active', b.dataset.slug === id));
+        const btn = document.querySelector('.nav-item[data-slug="' + id + '"]');
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btn?.classList.add('active');
+        scrollNavbarToActive(btn);
       }
     });
   }, {rootMargin:'-40% 0px -55% 0px'});
   document.querySelectorAll('[id^="cat-"]').forEach(s => obs.observe(s));
+}
+
+function scrollNavbarToActive(activeBtn) {
+  const navbar = document.getElementById('navbar');
+  if (!activeBtn || !navbar) return;
+  const navRect = navbar.getBoundingClientRect();
+  const btnRect = activeBtn.getBoundingClientRect();
+  const scrollLeft = btnRect.left - navRect.left - (navRect.width / 2) + (btnRect.width / 2);
+  navbar.scrollBy({left: scrollLeft, behavior: 'smooth'});
+}
+
+function filtrarProductos(query) {
+  const q = query.toLowerCase().trim();
+  const sections = document.querySelectorAll('#menu section');
+  sections.forEach(sec => {
+    const cards = sec.querySelectorAll('.product-card');
+    let hasMatch = false;
+    cards.forEach(card => {
+      const name = card.querySelector('.product-name').textContent.toLowerCase();
+      const desc = card.querySelector('.product-desc').textContent.toLowerCase();
+      const match = !q || name.includes(q) || desc.includes(q);
+      card.style.display = match ? 'flex' : 'none';
+      if (match) hasMatch = true;
+    });
+    sec.style.display = hasMatch ? 'block' : 'none';
+  });
+  // Ocultar navbar cuando hay búsqueda activa
+  document.getElementById('navbar').style.display = q ? 'none' : 'flex';
 }
 
 // ─────────────────────────────────────────────
